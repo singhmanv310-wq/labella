@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-padding-top: 5.5rem; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  :focus-visible { outline: 2px solid #C5A059; outline-offset: 2px; }
+  summary::-webkit-details-marker { display: none; }
+}
+
+@layer components {
+  .champagne-text {
+    background: linear-gradient(135deg, #E6C885 0%, #C5A059 55%, #B58B3E 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .field {
+    @apply w-full rounded-lg border border-olive-300 bg-white px-4 py-3 text-sm text-olive-900 placeholder-olive-400 focus:border-olive-500 focus:outline-none focus:ring-1 focus:ring-olive-500;
+  }
+  .field-label { @apply mb-1 block text-xs font-semibold text-olive-800; }
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-lg bg-olive-500 px-5 py-3 text-sm font-bold text-white shadow-md transition-colors hover:bg-olive-600 disabled:cursor-not-allowed disabled:opacity-60; }
+  .section-title { @apply font-serif text-3xl font-bold text-olive-900 sm:text-4xl; }
+}

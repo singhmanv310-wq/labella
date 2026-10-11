@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Leads | Eldeco La Vida Bella CRM</title>
+  <link rel="icon" href="data:,">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+</head>
+<body class="min-h-screen bg-olive-950 font-sans text-white">
+
+  <!-- Sign in -->
+  <div id="loginView" class="hidden min-h-screen items-center justify-center p-4">
+    <div class="w-full max-w-sm space-y-5 rounded-2xl bg-white p-8 text-olive-900 shadow-2xl">
+      <div class="text-center">
+        <h1 class="font-serif text-2xl font-bold">CRM sign in</h1>
+        <p class="mt-1 text-sm text-olive-600">Eldeco La Vida Bella leads</p>
+      </div>
+      <form id="loginForm" class="space-y-4">
+        <label class="block"><span class="field-label">Email</span><input id="email" type="email" required autocomplete="username" class="field"></label>
+        <label class="block"><span class="field-label">Password</span><input id="password" type="password" required autocomplete="current-password" class="field"></label>
+        <p id="loginError" class="hidden rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert"></p>
+        <button type="submit" class="btn-primary w-full">Sign in</button>
+      </form>
+      <a href="/" class="block text-center text-xs text-olive-600 underline">Back to website</a>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="appView" class="hidden">
+    <header class="flex items-center justify-between border-b border-olive-800 bg-olive-900 px-4 py-4 sm:px-6">
+      <div>
+        <h1 class="text-sm font-bold">Eldeco La Vida Bella CRM</h1>
+        <p id="who" class="text-xs text-emerald-400"></p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a id="exportLink" href="/api/admin/export.csv" class="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold hover:bg-emerald-600"><i class="fa-solid fa-file-csv mr-1" aria-hidden="true"></i> Export CSV</a>
+        <button id="logout" type="button" class="rounded-lg bg-red-900/60 px-3 py-2 text-xs text-red-100 hover:bg-red-900">Sign out</button>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-[96rem] space-y-6 p-4 sm:p-6">
+      <section class="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Summary">
+        <div class="rounded-xl border border-olive-800 bg-olive-900 p-5"><p class="text-xs text-gray-400">Total leads</p><p id="sTotal" class="mt-1 text-3xl font-bold">0</p></div>
+        <div class="rounded-xl border border-olive-800 bg-olive-900 p-5"><p class="text-xs text-gray-400">New (not contacted)</p><p id="sNew" class="mt-1 text-3xl font-bold text-champagne-400">0</p></div>
+        <div class="rounded-xl border border-olive-800 bg-olive-900 p-5"><p class="text-xs text-gray-400">Received today</p><p id="sToday" class="mt-1 text-3xl font-bold">0</p></div>
+        <div class="rounded-xl border border-olive-800 bg-olive-900 p-5"><p class="text-xs text-gray-400">Won</p><p id="sWon" class="mt-1 text-3xl font-bold text-emerald-400">0</p></div>
+      </section>
+
+      <section class="space-y-4 rounded-2xl border border-olive-800 bg-olive-900 p-4 sm:p-6">
+        <div class="flex flex-col gap-3 sm:flex-row">
+          <label class="flex-1"><span class="sr-only">Search leads</span>
+            <input id="search" type="search" placeholder="Search name, phone, email, ref ID, notes" class="w-full rounded-lg border border-olive-700 bg-olive-950 px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none"></label>
+          <label><span class="sr-only">Filter by status</span>
+            <select id="statusFilter" class="w-full rounded-lg border border-olive-700 bg-olive-950 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none sm:w-48"><option value="">All statuses</option></select></label>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-olive-800">
+          <table class="w-full min-w-[60rem] text-left text-xs">
+            <thead class="bg-olive-950 text-gray-400">
+              <tr>
+                <th class="p-3 font-medium">Ref ID</th><th class="p-3 font-medium">Received</th><th class="p-3 font-medium">Name</th>
+                <th class="p-3 font-medium">Phone</th><th class="p-3 font-medium">Email</th><th class="p-3 font-medium">Unit</th>
+                <th class="p-3 font-medium">Source</th><th class="p-3 font-medium">Status</th><th class="p-3 font-medium">Notes</th><th class="p-3 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rows" class="divide-y divide-olive-800 text-gray-200"></tbody>
+          </table>
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-gray-400">
+          <span id="pageInfo"></span>
+          <div class="flex gap-2">
+            <button id="prev" type="button" class="rounded-lg border border-olive-700 px-3 py-1.5 hover:bg-olive-800 disabled:opacity-40">Previous</button>
+            <button id="next" type="button" class="rounded-lg border border-olive-700 px-3 py-1.5 hover:bg-olive-800 disabled:opacity-40">Next</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="pointer-events-none fixed bottom-4 left-1/2 hidden -translate-x-1/2 rounded-lg bg-emerald-700 px-4 py-2 text-sm shadow-lg" role="status"></div>
+  <script src="/assets/js/admin.js" defer></script>
+</body>
+</html>
