@@ -29,7 +29,7 @@ const rateLimit = require('express-rate-limit');
 const isProd = process.env.NODE_ENV === 'production';
 const cfg = {
   port: Number(process.env.PORT) || 3000,
-  siteUrl: (process.env.SITE_URL || '').replace(/\/+$/, ''),
+  siteUrl: (process.env.SITE_URL || 'https://eldecomagnifico.in').replace(/\/+$/, ''),
   adminEmail: (process.env.ADMIN_EMAIL || '').trim().toLowerCase(),
   adminPassword: process.env.ADMIN_PASSWORD || '',
   adminPasswordHash: process.env.ADMIN_PASSWORD_HASH || '',
