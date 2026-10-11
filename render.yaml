@@ -3,19 +3,13 @@ services:
     name: eldeco-la-vida-bella
     runtime: node
     region: singapore
-    plan: starter
+    plan: free
     buildCommand: npm ci --omit=dev
     startCommand: npm start
     healthCheckPath: /healthz
-    disk:
-      name: crm-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATA_DIR
-        value: /var/data
       - key: TRUST_PROXY
         value: "1"
       - key: ADMIN_EMAIL
