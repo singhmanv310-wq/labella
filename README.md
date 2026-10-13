@@ -21,8 +21,9 @@ Local dev login (only when NODE_ENV is not "production"): `admin@example.com` / 
 4. Start command: `npm install --omit=dev && npm start` (or build the included `Dockerfile`).
 5. Point your domain / subdomain at it and enable HTTPS (Render, Railway, Fly.io, or a VPS with Nginx + Certbot all do this).
 
-**Important: leads are stored in `DATA_DIR/leads.json`, so that folder must be on a persistent disk or volume.**
-Free tiers with temporary disks will lose leads on every restart. Set `WEBHOOK_URL` as well so every lead is also pushed to a Google Sheet, Zapier, Make or Slack as a backup. Back up `leads.json` regularly.
+Set `MONGODB_URI` to your MongoDB Atlas connection string and optionally `MONGODB_DATABASE` (defaults to `eldeco`) in the hosting dashboard. The URI is a server secret: never put it in browser JavaScript or commit it to Git. In Atlas, create a database user, allow the hosting provider's outbound IP in Network Access, then copy the Node.js connection string and replace its username, password, and database as instructed by Atlas. The app creates its `leads` and `counters` collections and indexes on startup. Existing local JSON leads are not automatically imported.
+
+Without `MONGODB_URI`, leads continue to be stored in `DATA_DIR/leads.json`; that folder must be on a persistent disk or volume. Set `WEBHOOK_URL` as a backup if needed.
 
 ## Before you go live (please check)
 - **Hero image:** add your licensed photo as `public/assets/img/hero.jpg`. Without it the page shows a clean tower illustration instead. I did not hotlink the developer's images.

@@ -1,7 +1,7 @@
 'use strict';
 /**
  * Eldeco La Vida Bella – website + lead capture + admin CRM
- * Single Node.js service. No database server needed (leads are stored in data/leads.json).
+ * Single Node.js service. Leads use MongoDB Atlas when configured, otherwise data/leads.json.
  */
 const fs = require('fs');
 const path = require('path');
@@ -24,6 +24,7 @@ const express = require('express');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const { MongoClient } = require('mongodb');
 
 /* ---------- configuration ---------- */
 const isProd = process.env.NODE_ENV === 'production';
@@ -35,6 +36,8 @@ const cfg = {
   adminPasswordHash: process.env.ADMIN_PASSWORD_HASH || '',
   sessionSecret: process.env.SESSION_SECRET || '',
   dataDir: path.resolve(process.env.DATA_DIR || path.join(__dirname, 'data')),
+  mongoUri: process.env.MONGODB_URI || '',
+  mongoDatabase: process.env.MONGODB_DATABASE || 'eldeco',
   webhookUrl: process.env.WEBHOOK_URL || '',
   brochureUrl: process.env.BROCHURE_URL || '/private/floorplans/eldeco-la-vida-bella-brochure.pdf',
   trustProxy: process.env.TRUST_PROXY === undefined ? (isProd ? 1 : false) : (isNaN(Number(process.env.TRUST_PROXY)) ? process.env.TRUST_PROXY === 'true' : Number(process.env.TRUST_PROXY)),
@@ -70,6 +73,8 @@ class LeadStore {
     this.file = path.join(dir, 'leads.json');
     this.leads = [];
     this.queue = Promise.resolve();
+    this.mongo = null;
+    this.mongoLeads = null;
     if (fs.existsSync(this.file)) {
       try {
         this.leads = JSON.parse(fs.readFileSync(this.file, 'utf8'));
@@ -79,6 +84,20 @@ class LeadStore {
         console.error('leads.json was unreadable; copied to ' + bad + ' and starting fresh.');
       }
     }
+  }
+  async connect() {
+    if (!cfg.mongoUri) return;
+    this.mongo = new MongoClient(cfg.mongoUri, { serverSelectionTimeoutMS: 10000 });
+    await this.mongo.connect();
+    const db = this.mongo.db(cfg.mongoDatabase);
+    this.mongoLeads = db.collection('leads');
+    await this.mongoLeads.createIndex({ id: 1 }, { unique: true });
+    await this.mongoLeads.createIndex({ createdAt: -1 });
+    const stored = await this.mongoLeads.find({}, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
+    this.leads = stored;
+    const maxId = stored.reduce((max, lead) => Math.max(max, parseInt(String(lead.id).replace(/\D/g, ''), 10) || 0), 0);
+    await db.collection('counters').updateOne({ _id: 'leads' }, { $max: { value: maxId } }, { upsert: true });
+    console.log(`Connected to MongoDB database: ${cfg.mongoDatabase}`);
   }
   _nextId() {
     let max = 0;
@@ -97,7 +116,15 @@ class LeadStore {
     return this.queue;
   }
   async insert(data) {
-    const lead = { id: this._nextId(), createdAt: new Date().toISOString(), status: 'New', notes: '', ...data };
+    let id = this._nextId();
+    if (this.mongo) {
+      const counter = await this.mongo.db(cfg.mongoDatabase).collection('counters').findOneAndUpdate(
+        { _id: 'leads' }, { $inc: { value: 1 } }, { upsert: true, returnDocument: 'after' }
+      );
+      id = 'ELD-' + String(counter.value).padStart(5, '0');
+    }
+    const lead = { id, createdAt: new Date().toISOString(), status: 'New', notes: '', ...data };
+    if (this.mongoLeads) await this.mongoLeads.insertOne(lead);
     this.leads.unshift(lead);
     await this._flush();
     return lead;
@@ -105,6 +132,10 @@ class LeadStore {
   async update(id, patch) {
     const lead = this.leads.find((l) => l.id === id);
     if (!lead) return null;
+    if (this.mongoLeads) {
+      const result = await this.mongoLeads.updateOne({ id }, { $set: patch });
+      if (!result.matchedCount) return null;
+    }
     Object.assign(lead, patch);
     await this._flush();
     return lead;
@@ -112,6 +143,10 @@ class LeadStore {
   async remove(id) {
     const i = this.leads.findIndex((l) => l.id === id);
     if (i === -1) return false;
+    if (this.mongoLeads) {
+      const result = await this.mongoLeads.deleteOne({ id });
+      if (!result.deletedCount) return false;
+    }
     this.leads.splice(i, 1);
     await this._flush();
     return true;
@@ -125,7 +160,7 @@ class LeadStore {
         .some((v) => String(v || '').toLowerCase().includes(needle));
     });
   }
-  drain() { return this.queue; }
+  async drain() { await this.queue; if (this.mongo) await this.mongo.close(); }
 }
 const store = new LeadStore(cfg.dataDir);
 
@@ -417,7 +452,17 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   res.status(500).json({ ok: false, error: 'Server error.' });
 });
 
-const server = app.listen(cfg.port, () => console.log(`Listening on http://localhost:${cfg.port}`));
-const shutdown = () => { server.close(() => store.drain().then(() => process.exit(0))); setTimeout(() => process.exit(1), 8000).unref(); };
+let server;
+store.connect().then(() => {
+  server = app.listen(cfg.port, () => console.log(`Listening on http://localhost:${cfg.port}`));
+}).catch((err) => {
+  console.error('Could not initialize lead storage:', err.message);
+  process.exit(1);
+});
+const shutdown = () => {
+  const finish = () => store.drain().then(() => process.exit(0));
+  if (server) server.close(finish); else finish();
+  setTimeout(() => process.exit(1), 8000).unref();
+};
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
